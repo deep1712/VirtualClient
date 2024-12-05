@@ -29,11 +29,6 @@ namespace VirtualClient.Actions
         {
         }
 
-        private long RoundOffToNearest512Multiple(double number)
-        {
-            return (long)Math.Round(number / 512.0);
-        }
-
         /// <inheritdoc/>
         public override IList<Metric> Parse()
         {
@@ -94,6 +89,28 @@ namespace VirtualClient.Actions
 
             // Removing unnecessary starting and ending space.
             this.PreprocessedText = this.PreprocessedText.Trim();
+        }
+
+        private long RoundOffToNearest512Multiple(double number)
+        {
+            return (long)Math.Round(number / 512.0);
+        }
+
+        private string MetricNameSuffix(double bytes)
+        {
+            if (bytes >= 1024 * 1024)
+            {
+                return $"{bytes / (1024 * 1024)}_MiB";
+            }
+            else if (bytes >= 1024)
+            {
+                return $"{bytes / 1024}_KiB";
+            }
+            else
+            {
+                return $"{bytes}_B";
+            }
+
         }
     }
 }
