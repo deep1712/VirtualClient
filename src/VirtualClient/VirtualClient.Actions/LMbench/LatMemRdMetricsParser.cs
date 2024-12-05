@@ -17,6 +17,7 @@ namespace VirtualClient.Actions
         /// <summary>
         /// Sectionize by one or more empty lines.
         /// </summary>
+        private static readonly Regex LatMemRdSectionDelimiter = new Regex(@"(\r)(\n)(\s)*(\r)(\n)", RegexOptions.ExplicitCapture);
         private static readonly Regex LatMemRdSectionDelimiter = new Regex(@$"({Environment.NewLine})(\s)*({Environment.NewLine})", RegexOptions.ExplicitCapture);
 
         /// <summary>
@@ -28,6 +29,11 @@ namespace VirtualClient.Actions
         {
         }
 
+        private long RoundOffToNearest512Multiple(double number)
+        {
+            return (long)Math.Round(number / 512.0);
+        }
+
         /// <inheritdoc/>
         public override IList<Metric> Parse()
         {
@@ -36,6 +42,7 @@ namespace VirtualClient.Actions
             this.Sections = TextParsingExtensions.Sectionize(this.PreprocessedText, LatMemRdSectionDelimiter);
             foreach (var section in this.Sections)
             {
+                var lines = section.Value.Split("\r\n");
                 var lines = section.Value.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
                 foreach (var line in lines)
                 {
@@ -44,6 +51,7 @@ namespace VirtualClient.Actions
                     var metadata = new Dictionary<string, IConvertible>();
                     metadata.Add("StrideSizeBytes", strideSize);
                     metadata.Add("ArraySizeInMiB", values[0]);
+                    metrics.Add(new Metric($"Latency_StrideBytes_{strideSize}_Array_{values[0]}_B/KiB/MiB", double.Parse(values[1]), "ns", MetricRelativity.LowerIsBetter, null, $"Latency for memory read operation for Array size in MB {values[0]} & stride size {strideSize} in nano seconds", metadata));
                     long arraySizeInBytes = this.RoundOffToNearest512Multiple(double.Parse(values[0]) * 1024 * 1024) * 512;
                     metrics.Add(new Metric($"Latency_StrideBytes_{strideSize}_Array_{this.MetricNameSuffix(arraySizeInBytes)}", double.Parse(values[1]), "ns", MetricRelativity.LowerIsBetter, null, $"Latency for memory read operation for Array size in MB {values[0]} & stride size {strideSize} in nano seconds", metadata));
                 }
@@ -56,6 +64,8 @@ namespace VirtualClient.Actions
         /// <inheritdoc/>
         protected override void Preprocess()
         {
+            // Converting all CRLF(Windows EOL) to LF(Unix EOL).
+            this.PreprocessedText = Regex.Replace(this.RawText, "\r\n", "\n");
             // Removing unnecessary starting and ending space.
             this.PreprocessedText = this.RawText.Trim();
         }
@@ -65,6 +75,8 @@ namespace VirtualClient.Actions
             return (long)Math.Round(number / 512.0);
         }
 
+            // Converting all LF to CRLF.
+            this.PreprocessedText = Regex.Replace(this.PreprocessedText, "\n", "\r\n");
         private string MetricNameSuffix(double bytes)
         {
             if (bytes >= 1024 * 1024)
@@ -80,6 +92,8 @@ namespace VirtualClient.Actions
                 return $"{bytes}_B";
             }
 
+            // Removing unnecessary starting and ending space.
+            this.PreprocessedText = this.PreprocessedText.Trim();
         }
     }
 }
