@@ -88,7 +88,7 @@ namespace VirtualClient.Actions
             }
 
             // Removing unnecessary starting and ending space.
-            this.PreprocessedText = this.PreprocessedText.Trim();
+            this.PreprocessedText = this.RawText.Trim();
         }
 
         private long RoundOffToNearest512Multiple(double number)
