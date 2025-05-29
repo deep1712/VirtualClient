@@ -5,15 +5,11 @@ namespace VirtualClient.Actions
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Runtime.InteropServices;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.DependencyInjection;
-    using Microsoft.Extensions.Logging;
     using VirtualClient.Common;
     using VirtualClient.Common.Extensions;
-    using VirtualClient.Common.Platform;
     using VirtualClient.Common.Telemetry;
     using VirtualClient.Contracts;
     using VirtualClient.Contracts.Metadata;
@@ -21,7 +17,7 @@ namespace VirtualClient.Actions
     /// <summary>
     /// The DCGMI Executor for GPU
     /// </summary>
-    [SupportedPlatforms("linux-x64")]
+    [SupportedPlatforms("linux-x64,linux-arm64")]
     public class DCGMIExecutor : VirtualClientComponent
     {
         /// <summary>
