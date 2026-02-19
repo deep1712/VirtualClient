@@ -46,7 +46,6 @@ namespace VirtualClient.Actions
                     var metadata = new Dictionary<string, IConvertible>();
                     metadata.Add("StrideSizeBytes", strideSize);
                     metadata.Add("ArraySizeInMiB", values[0]);
-                    metrics.Add(new Metric($"Latency_StrideBytes_{strideSize}_Array_{values[0]}_B/KiB/MiB", double.Parse(values[1]), "ns", MetricRelativity.LowerIsBetter, null, $"Latency for memory read operation for Array size in MB {values[0]} & stride size {strideSize} in nano seconds", metadata));
                     long arraySizeInBytes = this.RoundOffToNearest512Multiple(double.Parse(values[0]) * 1024 * 1024) * 512;
                     metrics.Add(new Metric($"Latency_StrideBytes_{strideSize}_Array_{this.MetricNameSuffix(arraySizeInBytes)}", double.Parse(values[1]), "ns", MetricRelativity.LowerIsBetter, null, $"Latency for memory read operation for Array size in MB {values[0]} & stride size {strideSize} in nano seconds", metadata));
                 }
@@ -59,34 +58,6 @@ namespace VirtualClient.Actions
         /// <inheritdoc/>
         protected override void Preprocess()
         {
-            // Converting all CRLF(Windows EOL) to LF(Unix EOL).
-            this.PreprocessedText = Regex.Replace(this.RawText, "\r\n", "\n");
-            // Removing unnecessary starting and ending space.
-            this.PreprocessedText = this.RawText.Trim();
-        }
-
-        private long RoundOffToNearest512Multiple(double number)
-        {
-            return (long)Math.Round(number / 512.0);
-        }
-
-            // Converting all LF to CRLF.
-            this.PreprocessedText = Regex.Replace(this.PreprocessedText, "\n", "\r\n");
-        private string MetricNameSuffix(double bytes)
-        {
-            if (bytes >= 1024 * 1024)
-            {
-                return $"{bytes / (1024 * 1024)}_MiB";
-            }
-            else if (bytes >= 1024)
-            {
-                return $"{bytes / 1024}_KiB";
-            }
-            else
-            {
-                return $"{bytes}_B";
-            }
-
             // Removing unnecessary starting and ending space.
             this.PreprocessedText = this.RawText.Trim();
         }
