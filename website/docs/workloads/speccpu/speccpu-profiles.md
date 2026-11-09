@@ -178,6 +178,7 @@ for evaluating the performance of the CPU for processing calculations.
 * **Notes**  
   On Windows, only the following benchmarks are supported: 505.mcf_r, 525.x264_r, 541.leela_r, 548.exchange2_r, 557.xz_r.
   On Linux, `NumaProcessorAffinity=symmetric` selects CPUs from `numactl --hardware`, giving each node as even a share of `CopyCount` as its available CPUs allow. If `CopyCount` is not divisible by the number of nodes, lower-numbered nodes receive the extra copies. Pinned copies use `numactl --localalloc` for local memory allocation. These examples assume 96 CPUs on two NUMA nodes: CPUs 0-47 on node 0 and 48-95 on node 1. Check the actual topology with `numactl --hardware`.
+  Scenario metadata records the selected `NumaProcessorAffinity` using compact ranges for three or more consecutive CPUs (for example, `1-8,18-20`); the per-copy binding list remains unchanged.
 
   ``` bash
   # Two INTRATE copies: CPU 0 on node 0 and CPU 48 on node 1.
