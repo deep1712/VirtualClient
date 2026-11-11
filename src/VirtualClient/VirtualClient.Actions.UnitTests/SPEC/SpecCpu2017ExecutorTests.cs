@@ -771,6 +771,56 @@ namespace VirtualClient.Actions
             }
         }
 
+        [TestCase(3, 4, 6, "0,1,4,5,8,9")]
+        [TestCase(3, 4, 12, "0-11")]
+        [TestCase(3, 4, 13, "0-12")]
+        [TestCase(3, 4, 15, "0-12,16,20")]
+        [TestCase(3, 4, 24, "0-23")]
+        [TestCase(2, 48, 4, "0,1,48,49")]
+        [TestCase(2, 48, 100, "0-97,144,145")]
+        public async Task SpecCpu2017ExecutorSelectsSymmetricNumaAffinityWhenNumaNodeCpuRangesAreBifurcated(int nodeCount, int cpusPerRange, int copyCount, string expectedCoreSpec)
+        {
+            this.SetupLinux();
+            this.SetupInstalledAffinityRun(string.Empty);
+            this.mockFixture.Parameters[nameof(SpecCpuExecutor.EnableNumaProcessorAffinitySymmetric)] = true;
+            this.mockFixture.Parameters[nameof(SpecCpuExecutor.CopyCount)] = copyCount;
+
+            // SMT siblings are numbered after all physical cores, e.g. for 3 nodes x 4: node 0 = 0-3,12-15; node 1 = 4-7,16-19; node 2 = 8-11,20-23.
+            string topology = $"available: {nodeCount} nodes (0-{nodeCount - 1})\n" + string.Join("\n", Enumerable.Range(0, nodeCount).Select(node =>
+                $"node {node} cpus: {string.Join(" ", Enumerable.Range(node * cpusPerRange, cpusPerRange).Concat(Enumerable.Range((nodeCount + node) * cpusPerRange, cpusPerRange)))}\nnode {node} size: 16000 MB\nnode {node} free: 12000 MB"));
+
+            string pinnedConfig = null;
+            this.mockFixture.File.Setup(f => f.WriteAllTextAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Callback<string, string, CancellationToken>((path, content, token) => pinnedConfig = content)
+                .Returns(Task.CompletedTask);
+
+            List<string> commands = new List<string>();
+            this.mockFixture.ProcessManager.OnCreateProcess = (exe, arguments, workingDir) =>
+            {
+                commands.Add($"{exe} {arguments}");
+                return new InMemoryProcess
+                {
+                    StartInfo = new ProcessStartInfo { FileName = exe, Arguments = arguments },
+                    StandardOutput = new ConcurrentBuffer(new StringBuilder(exe == "numactl" && arguments == "--hardware" ? topology : string.Empty)),
+                    ExitCode = 0,
+                    OnStart = () => true,
+                    OnHasExited = () => true
+                };
+            };
+
+            using (TestSpecCpu2017Executor executor = new TestSpecCpu2017Executor(this.mockFixture.Dependencies, this.mockFixture.Parameters))
+            {
+                await executor.ExecuteAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+
+            string expectedCpus = string.Join(",", global::VirtualClient.Common.ProcessAffinity.ProcessAffinityConfiguration.ParseCoreList(expectedCoreSpec));
+            StringAssert.Contains($"bind = {expectedCpus}", pinnedConfig);
+            Assert.IsTrue(commands.Any(command => command == $"numactl --localalloc -C {expectedCoreSpec} true"));
+            EventContext selection = (EventContext)this.mockFixture.Logger.Single(entry => entry.Item2.Name.EndsWith(".SymmetricAffinitySelected", StringComparison.Ordinal)).Item3;
+            Assert.AreEqual(expectedCpus, selection.Properties["cpuIds"]);
+            Assert.AreEqual(expectedCoreSpec, ((IDictionary<string, object>)selection.Properties["metadata_scenario"])["NumaProcessorAffinity"]);
+        }
+
         [TestCase("", false, Architecture.X64)]
         [TestCase("0-3", true, Architecture.X64)]
         [TestCase("0-3", true, Architecture.Arm64)]

@@ -762,6 +762,8 @@ namespace VirtualClient.Actions
         /// and 40 copies select 0-19 and 48-67. For three 32-CPU nodes (0-31, 32-63, 64-95),
         /// 3 copies select 0, 32, 64 and 40 copies select 0-13, 32-44, 64-76.
         /// The returned list contains individual CPU IDs, not range notation.
+        /// NUMA nodes with non-contiguous (bifurcated) CPU ranges, e.g. node 0 with 0-47,96-143, are supported:
+        /// each node's CPUs are taken in ascending order, filling one range before continuing into the next.
         /// </remarks>
         /// <param name="cancellationToken">A token used to cancel the topology query.</param>
         /// <returns>The selected CPU IDs in ascending order, separated by commas.</returns>
